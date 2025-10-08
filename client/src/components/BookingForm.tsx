@@ -62,8 +62,8 @@ const bookingSchema = z.object({
 type BookingFormData = z.infer<typeof bookingSchema>;
 
 export default function BookingForm() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const { toast } = useToast();
 
   const form = useForm<BookingFormData>({
     resolver: zodResolver(bookingSchema),
@@ -84,17 +84,36 @@ export default function BookingForm() {
     },
   });
 
-  const onSubmit = async (data: BookingFormData) => {
-    setIsSubmitting(true);
-    console.log("Form submitted:", data);
-    console.log("Selected file:", selectedFile);
-    
-    setTimeout(() => {
-      setIsSubmitting(false);
-      alert("예약 신청이 완료되었습니다!");
+  const createBookingMutation = useMutation({
+    mutationFn: async (data: BookingFormData) => {
+      return await apiRequest("/api/bookings", {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      toast({
+        title: "예약 신청 완료",
+        description: "예약 신청이 성공적으로 접수되었습니다.",
+      });
       form.reset();
       setSelectedFile(null);
-    }, 1500);
+    },
+    onError: (error) => {
+      toast({
+        title: "예약 신청 실패",
+        description: error instanceof Error ? error.message : "예약 신청 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = async (data: BookingFormData) => {
+    createBookingMutation.mutate(data);
   };
 
   return (
@@ -418,10 +437,10 @@ export default function BookingForm() {
                   type="submit" 
                   size="lg" 
                   className="w-full md:w-auto px-12 py-6 text-lg"
-                  disabled={isSubmitting}
+                  disabled={createBookingMutation.isPending}
                   data-testid="button-submit"
                 >
-                  {isSubmitting ? "제출 중..." : "예약 신청하기"}
+                  {createBookingMutation.isPending ? "제출 중..." : "예약 신청하기"}
                 </Button>
               </div>
             </form>
