@@ -1,3 +1,5 @@
+/*
+
 // src/lib/ga.ts
 declare global {
   interface Window {
@@ -25,3 +27,4 @@ export function pageview(path: string) {
   if (!window.gtag) return;
   window.gtag('event', 'page_view', { page_path: path });
 }
+*/
